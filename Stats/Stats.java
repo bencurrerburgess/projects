@@ -9,11 +9,10 @@ import java.util.TreeMap;
 import java.util.Map;
 import java.util.*;
 
-
-// Need a way of giving the 'document' to the user
-// Could keep 'document' private, put a wrapper around it. arguments take in a Stats instance as argument?
-// This prevents methods being used on anything but the entire document, unless they create multiple instances of 'Stats' - bad for Memory
-//
+//TODO look into nio
+/**
+ *
+ */
 class Stats{
 
     private String document = "";
@@ -24,7 +23,16 @@ class Stats{
     private int charCount = 0;
     private boolean initialised = false;
 
+    /** Creates an empty Stats instance
+     * @see     Stats(String)
+     *          <li>Initialise(String)</li>
+     */
     Stats(){}
+
+    /** Initialises the Stats object with the file at the provided file path
+         * @param filePath The path of the file that you wish to read in
+         * @see Initialise(String)
+         */
     Stats(String filePath){ Initialise(filePath);}
 
     /** Reads in a file ready to produce stats on it
@@ -70,29 +78,51 @@ class Stats{
     /** Gets the average length of all words in the document*/
     public float AvgWordLen(){ return (float) charCount/wordCount; }
 
+    /** Gets the entire document as a single string */
+    public String GetDocument(){ return document; }
 
-
-    /* returns histogram of words, takes list of words to make histogram of */
-    public TreeMap<String, Integer> StringsCount(List<String> list, boolean caseSensitive){
+    //TODO UPDATE COMMENT TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
+    /** Produces a histogram of words in the form of a TreeMap
+     * @param  in            The String that contains the words
+     * @param  list          This list of words to search for
+     * @param  caseSensitive Whether the search is case sensitive or not
+     * @param  wholeWord
+     * @return <Strong>Key</Strong> is the word
+     *         <li> <strong>Integer</Strong> is the count of occurances of that word </li>
+     */
+    public TreeMap<String, Integer> StringsCount(String in, List<String> list, boolean caseSensitive, boolean wholeWord){
         if(list == null){return null;}
         TreeMap<String, Integer> ret  = new  TreeMap<String, Integer>();
         for(String search : list){
-            ret.put(search, CountOcurranceString(document , search, caseSensitive) );
+            ret.put(search, CountOcurranceString(in , search, caseSensitive, wholeWord ) );
         }
         return ret;
     }
 
-    /* returns histogram of words, takes in any tree map where values are words to search for */
-    public TreeMap<String, Integer> StringsCount(TreeMap<Integer, String> mapIn, boolean caseSensitive){
+    /** Produces a histogram of words in the form of a TreeMap
+     * @param  in            The String to be searched
+     * @param  mapIn         A map Containing String values that will be searched for, keys are ignored
+     * @param  caseSensitive Whether the search is case sensitive or not
+     * @return <Strong>Key</Strong> is the word
+     *         <li> <strong>Integer</Strong> is the count of occurances of that word </li>
+     */
+    public TreeMap<String, Integer> StringsCount(String in, TreeMap<Integer, String> mapIn, boolean caseSensitive, boolean wholeWord){
         if(mapIn == null){ return null; }
         List<String> list = new ArrayList<String>(mapIn.values());
-        return StringsCount(list, caseSensitive);
+        return StringsCount(in, list, caseSensitive, wholeWord);
     }
 
-    public TreeMap<String, Integer> StringsCount(String[] arr, boolean caseSensitive){
+    /** Produces a histogram of words in the form of a TreeMap
+     * @param  in            The String to be searched
+     * @param  arr           An array of the strings to search for
+     * @param  caseSensitive Whether the search is case sensitive or not
+     * @return <Strong>Key</Strong> is the word
+     *         <li> <strong>Integer</Strong> is the count of occurances of that word </li>
+     */
+    public TreeMap<String, Integer> StringsCount(String in, String[] arr, boolean caseSensitive, boolean wholeWord){
         if(arr == null){ return null; }
         List<String> list = new ArrayList<>(Arrays.asList(arr));
-        return StringsCount(list, caseSensitive);
+        return StringsCount(in, list, caseSensitive, wholeWord);
     }
 
     /**
@@ -101,46 +131,34 @@ class Stats{
      * @param  caseSensitive Should this search be case sensitive?
      * @return               The string from arr that was most common. Null if none of the strings were present in the document
      */
-        public String MostCommonString(List<String> list, boolean caseSensitive){
+        public String MostCommonString(List<String> list, boolean caseSensitive, boolean wholeWord){
             if(list == null){return null;}
-            String r = null;
+            String ret = null;
             int max = 0;
             for(String search : list){
-                int count = CountOcurranceString(document , search, caseSensitive);
+                int count = CountOcurranceString(document , search, caseSensitive, wholeWord);
                 if(max < count){
                     max = count;
-                    r = search;
+                    ret = search;
                 }
             }
-            return r;
+            return ret;
         }
-
-
-//TODO add 'wholeWord' boolean argument to CountOccuranceString, at the moment it doesn't
-//TODO  do this by default so the word 'a' appears 9 times instead of once
-
+    //TODO TODO TODO TODO TODO TODO UPDATE COMMENT
     /** Gets the number of ocurrances of one string inside another.
      * @param  in0           The String we are looking inside of
      * @param  match0        The String we are looking for
      * @param  caseSensitive Is this search case sensitive?
      * @return               The total number of ocurrances
      */
-    public int CountOcurranceString(String in0, String match0, boolean caseSensitive){
-        int index = 0;
+    public int CountOcurranceString(String in, String match, boolean caseSensitive, boolean wholeWord){
+        String regex = match;
+        if(!caseSensitive){ regex = "(?i)" + regex; }
+        if(wholeWord){ regex = ".*\\b" + regex + "\\b.*"; }
+        Pattern p = Pattern.compile(regex);
+        Matcher m = p.matcher(in);
         int count = 0;
-        String in = in0;;
-        String match = match0;
-        if(!caseSensitive){
-             in = in.toLowerCase();
-             match = match.toLowerCase();
-         }
-        while(index != -1){
-            index = in.indexOf(match,index);
-            if(index != -1){
-                index += match.length();
-                count++;
-            }
-        }
+        while(m.find()){ count++; }
         return count;
     }
 
@@ -153,12 +171,10 @@ class Stats{
         Pattern p = Pattern.compile(regex);
         Matcher m = p.matcher(in);
         TreeMap<Integer, String> ret = new TreeMap<Integer, String>();
-        boolean found = false;
         while(m.find()){
             ret.put(m.start(), m.group());
-            found = true;
         }
-        if(!found){ return null;}
+        if(ret.size() < 1){ return null;}
         return ret;
     }
 
@@ -177,12 +193,39 @@ class Stats{
         return characters;
     }
 
+
+    public List<String> UniqueStrings(List<String> in, boolean caseSensitive){
+        if(in == null){ return null; }
+        List<String> list = new ArrayList<String>();
+        for(String s : in){
+            if(!caseSensitive){ s = s.toLowerCase(); }
+            if(!list.contains(s)){ list.add(s); }
+        }
+        return list;
+    }
+
+    public List<String> UniqueStrings(TreeMap<Integer, String> map, boolean caseSensitive){
+        if(map == null){ return null; }
+        List<String> list = new ArrayList<String>(map.values());
+        return UniqueStrings(list, caseSensitive);
+    }
+
+    public List<String> UniqueStrings(String[] arr, boolean caseSensitive){
+        if(arr == null){ return null;}
+        List<String> list = new ArrayList<String>(Arrays.asList(arr));
+        return UniqueStrings(list, caseSensitive);
+    }
+
+
     public String GetStringFromLine(int startLineNumber, int endLineNumber){
-        return document.substring(lineIndex[startLineNumber], lineIndex[endLineNumber]);
+        if(startLineNumber > endLineNumber || endLineNumber < 0 || startLineNumber < 0 || endLineNumber > lineCount){ return null; }
+        return TrimEnd(document.substring(lineIndex[startLineNumber], lineIndex[endLineNumber]));
+
     }
 
     public String GetStringFromWord(int startWordNumber, int endWordNumber){
-        return document.substring(wordIndex[startWordNumber], wordIndex[endWordNumber]);
+        if(startWordNumber > endWordNumber || endWordNumber < 0 || startWordNumber < 0 || endWordNumber > wordCount){ return null; }
+        return TrimEnd(document.substring(wordIndex[startWordNumber], wordIndex[endWordNumber]));
     }
 
     public String GetStringFromDocument(int startIndex, int endIndex){
@@ -194,11 +237,11 @@ class Stats{
 
     public int GetWordIndex(int wordNumber){ return wordIndex[wordNumber]; }
 
-    //TODO  check GetWordIndex + GetLineIndex methods,
-    //TODO  change GetStringFromLine and GetStringFromWord
-    //TODO  to take endword number as second argument instead of lenght
+    private String TrimEnd(String s){
+        return s.replaceFirst("\\s++$", "");
+    }
 
-    /** Scans the file into the relevant fields */
+    /** Scans in the file and populates all fields appropriately */
     private void ScanIn(Scanner scan, ArrayList<Integer> lineInd, ArrayList<Integer> wordInd){
         String line;
         lineInd.add(0);
@@ -253,46 +296,95 @@ class Stats{
         s.UnitTest();
     }
 
+    // dont want the compile flag
     private void claim(boolean b) { if(!b){ throw new Error("Test failure"); } }
 
     private void UnitTest(){
         System.out.print("Testing...");
         Initialise("test.txt");
 
-        //Standard getters (checking that initialise and all sub methods work corrextly)
+        ///////////////////////////////  Initialise  ///////////////////////////
         claim(WordCount() == 8);
         claim(LineCount() == 5);
         claim(CharCount() == 29);
         claim(AllCharCount() == 43);
         claim(String.format("%.1f",AvgWordLen()).equals("3.6"));
 
-        //Indecies
+        //////////////////////////////  Indecies  //////////////////////////////
         claim(LineCount() == lineIndex.length);
+        claim(lineCount == lineIndex.length);
         claim(WordCount() == wordIndex.length);
-        claim(lineIndex[1] == 10);
-        claim(lineIndex[4] == 34);
-        claim(wordIndex[2] == 6);
-        claim(wordIndex[4] == 16);
-        claim(wordIndex[5] == 20);
-        claim(wordIndex[7] == 34);
+        claim(wordCount == wordIndex.length);
+        //GetLineIndex
+        claim(GetLineIndex(0) == 0);
+        claim(GetLineIndex(1) == 10);
+        claim(GetLineIndex(2) == 32);
+        claim(GetLineIndex(3) == 33);
+        //GetWordIndex
+        claim(GetWordIndex(0) == 0);
+        claim(GetWordIndex(1) == 3);
+        claim(GetWordIndex(2) == 6);
+        claim(GetWordIndex(7) == 34);
 
-        //String Retrival
-        claim("a".equals(MostCommonString(GetCharactersUsed(false),false)));
-        claim("it has".equals(GetStringFromWord(3,6)));
-        claim("AC".equals(GetStringFromLine(4,2)));
+        claim(GetWordIndex(7) == GetLineIndex(4));
+
+        //////////////////////////  String retrival  ///////////////////////////
+        claim("a".equals(MostCommonString(GetCharactersUsed(false),false,false)));
+
+        //GetStringFromWord
+        claim("it".equals(GetStringFromWord(3,4)));
+        claim("it has three lines".equals(GetStringFromWord(3,7)));
+        claim(GetStringFromWord(-1,1) == null);
+        claim(GetStringFromWord(2,1) == null);
+        claim(GetStringFromWord(1,-1) == null);
+        claim(GetStringFromWord(1, 15) == null);
+        //GetStringFromLine
+        claim("a  bb ccc".equals(GetStringFromLine(0,1)));
+        claim(GetStringFromLine(-1,1) == null);
+        claim(GetStringFromLine(2,1) == null);
+        claim(GetStringFromLine(1,-1) == null);
+        claim(GetStringFromLine(1,6) == null);
+
         claim(GetStringFromDocument(0,AllCharCount()).equals(document));
 
-        //CountOccuranceString
-        claim(CountOcurranceString("aaAAA","A", true) == 3);
-        claim(CountOcurranceString("aaAAA","A", false) == 5);
-        claim(CountOcurranceString("aaAAA","a", true) == 2);
-        claim(CountOcurranceString("aaAAA","a", false) == 5);
+        //////////////////////  CountOccuranceString  //////////////////////////
+        String str = "a  bb ccc\n   it has three lines\n\n\nACaaaaaa";
+        //case sensitivity
+        claim(CountOcurranceString("aaAAA","A", true, false) == 3);
+        claim(CountOcurranceString("aaAAA","A", false, false) == 5);
+        claim(CountOcurranceString("aaAAA","a", true, false) == 2);
+        claim(CountOcurranceString("aaAAA","a", false, false) == 5);
+        claim(CountOcurranceString("a bb ccc", "bb", true, true) == 1);
+        claim(CountOcurranceString("a bb ccc", "BB", true, true) == 0);
+        //multi-word Strings
+        claim(CountOcurranceString("a bb ccc", "a bb", true, true) == 1);
+        claim(CountOcurranceString("a bb  ccc", "bb  ccc", true, true) == 1);
+        claim(CountOcurranceString(str,"ccc\n   it",false,true) == 1);
+        claim(CountOcurranceString(str,"ccc\n   it has",true,true) == 1);
+        claim(CountOcurranceString(str,"ccc\n   it has thre",true,true) == 0);
+        claim(CountOcurranceString(str,"ccc\n   it has three",true,true) == 1);
+        //whole word identification
+        claim(CountOcurranceString("a ba cac", "a", true, true) == 1);
+        claim(CountOcurranceString("a ba cac", "a", true, false) == 3);
+        claim(CountOcurranceString(str,"a",false,true) == 1);
+        claim(CountOcurranceString(str,"bb",false,true) == 1);
+        claim(CountOcurranceString(str,"ccc",false,true) == 1);
+        claim(CountOcurranceString(str,"it",false,true) == 1);
+        claim(CountOcurranceString(str,"has",false,true) == 1);
+        claim(CountOcurranceString(str,"three",false,true) == 1);
+        claim(CountOcurranceString(str,"lines",false,true) == 1);
+        claim(CountOcurranceString(str,"ACaaaaaa",false,true) == 1);
 
-        //MapFromRegex
+        //////////////////////////  MapFromRegex  //////////////////////////////
+        // words beginning t
         claim(MapFromRegex(document, "t\\w+").size() == 1);
+        //all words
         claim(MapFromRegex(document, "\\w+").size() == 8);
+        //all lines
         claim(MapFromRegex(document, "(?m)^.*$").size() == 5);
+        //all non-whitespace characters
         claim(MapFromRegex(document, "\\w").size() == 29);
+
         // checks that the key and value.length() from the map can be used
         // to get the exact same string by pulling a substring directly from document
         TreeMap<Integer, String> m =  MapFromRegex(document, "\\w+");
@@ -302,13 +394,31 @@ class Stats{
             claim(e.getValue().equals(docSubString));
         }
 
-        //StringsCount
-        TreeMap<String, Integer> n = StringsCount(m,false);
+        //inter-compatability of  MapFromRegex & StringsCount
+        TreeMap<String, Integer> n = StringsCount(GetDocument(), m ,false, true);
         claim(n.size() == WordCount());
         for(Map.Entry<String, Integer> en : n.entrySet()){
-            System.out.println(en.getKey() + " " + en.getValue());
-            //claim(en.getValue() == 1);
+         //  System.out.println(en.getKey() + " " + en.getValue());
+            claim(en.getValue() == 1);
         }
+
+        //////////////////////////  UniqueStrings  /////////////////////////////
+        String[] strArr = {"a", "b", "aa", "bb", "Aa", "bB", "a", "b" };
+        List<String> strList = new ArrayList<String>(Arrays.asList(atrArr));
+        claim(UniqueStrings(strArr, true).size() == 6);
+        claim(UniqueStrings(strArr, false).size() == 4);
+        claim(UniqueStrings(strList, true).size() == 6);
+        claim(UniqueStrings(strList, false).size() == 4);
+
+
+        Reset();
+        claim(document.equals(""));
+        claim(charCount == 0);
+        claim(wordCount == 0);
+        claim(lineCount == 0);
+        claim(lineIndex == null);
+        claim(wordIndex == null);
+        claim(!initialised);
         System.out.println(" Successful");
     }
 
@@ -316,7 +426,7 @@ class Stats{
 }
 
 /*
-eample Regex expressions:
+example Regex expressions:
 "\\w+"                              - Any Word
 "t\\w+"                             - Any word beginning with t
 "\\w+s"                             - Any word ending in s
