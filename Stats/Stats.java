@@ -9,9 +9,17 @@ import java.util.TreeMap;
 import java.util.Map;
 import java.util.*;
 
-//TODO look into nio
-/**
- *
+/** A class for reading in text files and producing statistics on them
+ *  <p>Standard statistics are available directly through getters, see all
+ *  methods ending 'Count'.
+ *  </p>
+ *  Other methods provide:
+ *  <ul>
+ *  <li> Find Strings matching Regex - see MapFromRegex </li>
+ *  <li> Find Strings using index of words and lines - see 'GetStringFrom' methods </li>
+ *  <li> Count of strings - see StringsCount </li>
+ *  <li> Convert String list / map to unique string occurances - see UniqueStrings </li>
+ *  </ul>
  */
 class Stats{
 
@@ -54,6 +62,7 @@ class Stats{
 
     /** Resets this Stats object to it's un-initialised state */
     public void Reset(){
+        if(!initialised){ return; }
         document = "";
         lineIndex = null;
         wordIndex = null;
@@ -81,12 +90,11 @@ class Stats{
     /** Gets the entire document as a single string */
     public String GetDocument(){ return document; }
 
-    //TODO UPDATE COMMENT TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
     /** Produces a histogram of words in the form of a TreeMap
-     * @param  in            The String that contains the words
-     * @param  list          This list of words to search for
-     * @param  caseSensitive Whether the search is case sensitive or not
-     * @param  wholeWord
+     * @param  in            The String to search
+     * @param  list          The list of Strings to search for
+     * @param  caseSensitive Should this search be case sensitive?
+     * @param  wholeWord     Should this search only count whole words?
      * @return <Strong>Key</Strong> is the word
      *         <li> <strong>Integer</Strong> is the count of occurances of that word </li>
      */
@@ -100,9 +108,10 @@ class Stats{
     }
 
     /** Produces a histogram of words in the form of a TreeMap
-     * @param  in            The String to be searched
-     * @param  mapIn         A map Containing String values that will be searched for, keys are ignored
-     * @param  caseSensitive Whether the search is case sensitive or not
+     * @param  in            The String to search
+     * @param  mapIn         A Map String Values to search for
+     * @param  caseSensitive Should this search be case sensitive?
+     * @param  wholeWord     Should this search only count whole words?
      * @return <Strong>Key</Strong> is the word
      *         <li> <strong>Integer</Strong> is the count of occurances of that word </li>
      */
@@ -113,9 +122,10 @@ class Stats{
     }
 
     /** Produces a histogram of words in the form of a TreeMap
-     * @param  in            The String to be searched
-     * @param  arr           An array of the strings to search for
-     * @param  caseSensitive Whether the search is case sensitive or not
+     * @param  in            The String to search
+     * @param  arr           An array of String Values to search for
+     * @param  caseSensitive Should this search be case sensitive?
+     * @param  wholeWord     Should this search only count whole words?
      * @return <Strong>Key</Strong> is the word
      *         <li> <strong>Integer</Strong> is the count of occurances of that word </li>
      */
@@ -125,10 +135,11 @@ class Stats{
         return StringsCount(in, list, caseSensitive, wholeWord);
     }
 
-    /**
-     * Finds which of the provided strings is the most common in the document
+    /** Finds which of the provided strings is the most common in the document.
+     * <p>If two or more strings from the list are joint max, the first string found will be returned</p>
      * @param  list          The list of strings to search for
      * @param  caseSensitive Should this search be case sensitive?
+     * @param  wholeWord     Should this search only count whole words?
      * @return               The string from arr that was most common. Null if none of the strings were present in the document
      */
         public String MostCommonString(List<String> list, boolean caseSensitive, boolean wholeWord){
@@ -144,12 +155,20 @@ class Stats{
             }
             return ret;
         }
-    //TODO TODO TODO TODO TODO TODO UPDATE COMMENT
+
     /** Gets the number of ocurrances of one string inside another.
      * @param  in0           The String we are looking inside of
      * @param  match0        The String we are looking for
      * @param  caseSensitive Is this search case sensitive?
      * @return               The total number of ocurrances
+     */
+
+    /** Gets the number of ocurrances of one string inside another.
+     * @param  in            The String to search
+     * @param  match         The String to find
+     * @param  caseSensitive Should this search be case sensitive?
+     * @param  wholeWord     Should this search only count whole words?
+     * @return               The count of 'match's in 'in'
      */
     public int CountOcurranceString(String in, String match, boolean caseSensitive, boolean wholeWord){
         String regex = match;
@@ -164,8 +183,9 @@ class Stats{
 
     /** Returns a TreeMap containing all the matched strings from the regex and their starting index
      * @param  in    The String to search
-     * @param  regex your regex expression as a String
-     * @return       TreeMap Key = Integer, Value = String. null if nothing found
+     * @param  regex The regex expression to match as a string
+     * @return <Strong>Key</Strong> is the starting index of the word
+     *         <li> <strong>Value</Strong> is a String that matched the regex expression </li>
      */
     public TreeMap<Integer, String> MapFromRegex(String in, String regex){
         Pattern p = Pattern.compile(regex);
@@ -179,7 +199,9 @@ class Stats{
     }
 
     /** Gets a list of unique characters used in this document
-    * @param caseSensitive is this search case sensitive?
+    * @param caseSensitive Should this search be case sensitive?
+    * @return  List of characters stored as String in the order that those
+    * characters appear in the document
     */
     public List<String> GetCharactersUsed(boolean caseSensitive){
         List<String> characters = new ArrayList<String>();
@@ -193,50 +215,87 @@ class Stats{
         return characters;
     }
 
-
-    public List<String> UniqueStrings(List<String> in, boolean caseSensitive){
-        if(in == null){ return null; }
-        List<String> list = new ArrayList<String>();
-        for(String s : in){
+    /** Converts a collection of strings to a list of unique strings
+     * @param  list          The list of strings to be made unique
+     * @param  caseSensitive Should this search be case sensitive? If flase, the returned list will be in lower case
+     * @return               A unique list of strings, in the order they appear in the input list
+     */
+    public List<String> UniqueStrings(List<String> list, boolean caseSensitive){
+        if(list == null){ return null; }
+        List<String> ret = new ArrayList<String>();
+        for(String s : list){
             if(!caseSensitive){ s = s.toLowerCase(); }
-            if(!list.contains(s)){ list.add(s); }
+            if(!ret.contains(s)){ ret.add(s); }
         }
-        return list;
+        return ret;
     }
 
+    /** Converts a collection of strings to a list of unique strings
+     * @param  map           A map containing strings to be made unique
+     * @param  caseSensitive Should this search be case sensitive? If flase, the returned list will be in lower case
+     * @return               A unique list of strings, in the order they appear in the input map
+     */
     public List<String> UniqueStrings(TreeMap<Integer, String> map, boolean caseSensitive){
         if(map == null){ return null; }
         List<String> list = new ArrayList<String>(map.values());
         return UniqueStrings(list, caseSensitive);
     }
 
+    /** Converts a collection of strings to a list of unique strings
+     * @param  arr           An array containing strings to be made unique
+     * @param  caseSensitive Should this search be case sensitive? If flase, the returned list will be in lower case
+     * @return               A unique list of strings, in the order they appear in the input map
+     */
     public List<String> UniqueStrings(String[] arr, boolean caseSensitive){
         if(arr == null){ return null;}
         List<String> list = new ArrayList<String>(Arrays.asList(arr));
         return UniqueStrings(list, caseSensitive);
     }
 
-
+    /** Gets the contents between the given line numbers
+     * @param  startLineNumber The line number to start at (0 is the first line)
+     * @param  endLineNumber   The line number to end at (finishes at the start of that line)
+     * @return                 The string between the two provided points in the document
+     */
     public String GetStringFromLine(int startLineNumber, int endLineNumber){
         if(startLineNumber > endLineNumber || endLineNumber < 0 || startLineNumber < 0 || endLineNumber > lineCount){ return null; }
         return TrimEnd(document.substring(lineIndex[startLineNumber], lineIndex[endLineNumber]));
 
     }
 
+    /** Gets the contents between the given word numbers
+     * @param  startWordNumber The word number to start at (0 is the first word)
+     * @param  endWordNumber   The word number to end at (finishes at the start of that word)
+     * @return                 The string between the two provided points in the document
+     */
     public String GetStringFromWord(int startWordNumber, int endWordNumber){
         if(startWordNumber > endWordNumber || endWordNumber < 0 || startWordNumber < 0 || endWordNumber > wordCount){ return null; }
         return TrimEnd(document.substring(wordIndex[startWordNumber], wordIndex[endWordNumber]));
     }
 
+    /** Gets a substring from the document based on the start and end indexes
+     * @param  startIndex The index to start at (0 is the beginning of the document)
+     * @param  endIndex   The index to End at
+     * @return            The selected substring
+     */
     public String GetStringFromDocument(int startIndex, int endIndex){
         if(startIndex < 0 || endIndex > document.length() ){throw new Error("Attempting to read beyond document bounds");}
         return document.substring(startIndex, endIndex);
     }
 
+    /** Gets the index in the document at the start of the given line number
+     * @param  lineNumber The line number that you want to get the index of
+     * @return            The index at the beginning of the given line number
+     */
     public int GetLineIndex(int lineNumber){ return lineIndex[lineNumber]; }
 
+    /** Gets the index in the document at the start of the given word number
+     * @param  wordNumber The word number that you want to get the index of
+     * @return            The index at the beginning of the given word number
+     */
     public int GetWordIndex(int wordNumber){ return wordIndex[wordNumber]; }
 
+    /** Trims only the end of a provided string */
     private String TrimEnd(String s){
         return s.replaceFirst("\\s++$", "");
     }
@@ -289,16 +348,16 @@ class Stats{
         return ar;
     }
 
-    ////////////////////////////   TESTING    ////////////////////////////////////
-
+    ////////////////////////////   TESTING    //////////////////////////////////
     public static void main(String... args){
         Stats s = new Stats();
         s.UnitTest();
     }
 
-    // dont want the compile flag
+    // A replacement for Assert to avoid having to use the compile flag
     private void claim(boolean b) { if(!b){ throw new Error("Test failure"); } }
 
+    // Automated tests to ensure the class is working as expected
     private void UnitTest(){
         System.out.print("Testing...");
         Initialise("test.txt");
@@ -404,12 +463,26 @@ class Stats{
 
         //////////////////////////  UniqueStrings  /////////////////////////////
         String[] strArr = {"a", "b", "aa", "bb", "Aa", "bB", "a", "b" };
-        List<String> strList = new ArrayList<String>(Arrays.asList(atrArr));
+        List<String> strList = new ArrayList<String>(Arrays.asList(strArr));
         claim(UniqueStrings(strArr, true).size() == 6);
         claim(UniqueStrings(strArr, false).size() == 4);
         claim(UniqueStrings(strList, true).size() == 6);
         claim(UniqueStrings(strList, false).size() == 4);
 
+        //most common letter
+        claim("a".equals(MostCommonString(UniqueStrings(MapFromRegex(document,"."), true),false,false)));
+        //most common 2 letter sequence
+        claim("aa".equals(MostCommonString(UniqueStrings(MapFromRegex(document,".."), true),false,false)));
+        //most common 2 letter word (first one found when there is more than 1 with the same count)
+        claim("bb".equals(MostCommonString(UniqueStrings(MapFromRegex(document,"\\w{2}"), true),false,true)));
+        // as above, but get map of all 2 letter words, to confirm that "bb" is in there, as well as "it"
+        TreeMap<String, Integer> tm = StringsCount(document,UniqueStrings(MapFromRegex(document,"\\w{2}"), true),true,true);
+        tm.containsKey("bb");
+        tm.containsKey("it");
+        claim( tm.get("bb") == 1);
+        claim( tm.get("it") == 1);
+        // total count of 2 letter words
+        claim( tm.values().stream().mapToInt(Integer::intValue).sum() == 2);
 
         Reset();
         claim(document.equals(""));
@@ -421,22 +494,4 @@ class Stats{
         claim(!initialised);
         System.out.println(" Successful");
     }
-
-
 }
-
-/*
-example Regex expressions:
-"\\w+"                              - Any Word
-"t\\w+"                             - Any word beginning with t
-"\\w+s"                             - Any word ending in s
-"\\w*[ic]\\w*"                      - Any word containing the letters c or i (case sensitive)
-"\\w*[cC]{2,}\\w*"                  - Any word with two or more consecutive c's (case insensitive)
-"\\b\\w{5}\\b"                      - Any 5 letter word
-"\\b\\w{2,5}\\b"                    - Any word between 2 and 5 letters long
-"(?m)^.*$"                          - Any Line
-"(?m)^.*[one|two|three].*$"         - Any Line containing "one", "two" or "three" anywhere in the line
-"(?m)^.*\\b(one|two|three)\\b.*$"   - Any line containing "one", "two", or "three" as whole words (e.g. won't return a line with "twentythree" in it)
-
-For full explanation of regex see here: https://docs.oracle.com/javase/7/docs/api/java/util/regex/Pattern.html#lt
-*/
